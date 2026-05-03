@@ -13,7 +13,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Ajout de la bibliothèque pour la génération PDF -->
+    <!-- Bibliothèque pour la génération PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
@@ -24,7 +24,7 @@
             background-color: #f1f5f9;
         }
 
-        /* CONFIGURATION IMPRESSION A4 */
+        /* CONFIGURATION IMPRESSION A4 / GENERATION PDF */
         @media print {
             @page {
                 size: A4;
@@ -47,7 +47,7 @@
                 width: 210mm !important;
                 height: 297mm !important;
                 margin: 0 !important;
-                padding: 15mm 25mm 15mm 25mm !important; /* Marges 2.5cm */
+                padding: 15mm 25mm 15mm 25mm !important; 
                 box-shadow: none !important;
                 border: none !important;
                 display: flex !important;
@@ -74,12 +74,14 @@
             }
         }
 
+        /* Styles pour les zones de saisie */
         .editable-field {
             transition: all 0.2s ease;
             border-radius: 4px;
             padding: 2px 4px;
             margin: -2px -4px;
             outline: none;
+            min-height: 1.2em;
         }
         .editable-field:hover {
             background-color: rgba(59, 130, 246, 0.08);
@@ -90,13 +92,20 @@
             box-shadow: 0 0 0 2px #3b82f6;
         }
 
+        /* Placeholders pour ContentEditable */
+        [contenteditable=true]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+            font-style: italic;
+            font-weight: 400;
+        }
+
         .table-grid th, .table-grid td {
             border-left: 1px solid #f1f5f9;
             border-right: 1px solid #f1f5f9;
             border-bottom: 1px solid #f1f5f9;
         }
 
-        /* Animation pour le bouton WhatsApp */
         .btn-whatsapp {
             background-color: #25D366;
             transition: transform 0.2s, background-color 0.2s;
@@ -105,27 +114,52 @@
             background-color: #128C7E;
             transform: translateY(-1px);
         }
+
+        /* Toast notifications */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 4.5s;
+        }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div class="max-w-6xl mx-auto">
+        <!-- HEADER INTERFACE -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 no-print">
             <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg">
+                <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
                 <div>
                     <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Newman Design</h1>
-                    <p class="text-xs text-gray-500 font-medium">Gestionnaire de Devis Local</p>
+                    <p class="text-xs text-gray-500 font-medium">Console de Facturation</p>
                 </div>
             </div>
             
             <div class="flex flex-wrap justify-center gap-3">
                 <button onclick="resetApp()" class="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm">
-                    Effacer
+                    Effacer tout
                 </button>
                 <button onclick="window.print()" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg transition-all flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,17 +167,18 @@
                     </svg>
                     Imprimer
                 </button>
-                <!-- Bouton WhatsApp -->
+                <!-- Bouton Partager via WhatsApp -->
                 <button onclick="shareViaWhatsApp()" class="btn-whatsapp px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-2">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 448 512">
                         <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.4-8.6-44.6-27.5-16.4-14.7-27.5-32.8-30.7-38.3-3.2-5.6-.3-8.6 2.5-11.4 2.5-2.5 5.5-6.5 8.3-9.7 2.8-3.3 3.7-5.5 5.5-9.2 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.6 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.5 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
                     </svg>
-                    Envoyer WhatsApp
+                    WhatsApp (PDF)
                 </button>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- PANEL DE CONTROLE -->
             <aside class="lg:col-span-1 space-y-5 no-print">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Client</h2>
@@ -167,13 +202,14 @@
                 </div>
             </aside>
 
+            <!-- DOCUMENT DEVIS -->
             <main class="lg:col-span-3">
                 <div id="devis-paper" class="bg-white p-12 md:p-16 rounded-2xl shadow-2xl border border-gray-100 print-container min-h-[297mm] flex flex-col">
                     
                     <div class="flex justify-between items-start mb-14">
                         <div class="border-l-4 border-blue-600 pl-6">
-                            <div id="prev-compName" class="text-2xl font-black text-blue-600 tracking-tighter uppercase editable-field" contenteditable="true" oninput="updateFromPreview()">NEWMAN DESIGN</div>
-                            <div id="prev-compAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()">Dakar, Sénégal</div>
+                            <div id="prev-compName" class="text-2xl font-black text-blue-600 tracking-tighter uppercase editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Nom de l'entreprise"></div>
+                            <div id="prev-compAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Adresse de l'émetteur"></div>
                         </div>
                         <div class="text-right">
                             <h2 class="text-5xl font-black text-gray-100 uppercase tracking-tighter mb-4 leading-none">DEVIS</h2>
@@ -195,8 +231,8 @@
                             <div class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                                 <span class="h-px w-6 bg-blue-600"></span> DESTINATAIRE
                             </div>
-                            <div id="prev-clientName" class="text-xl font-bold text-gray-900 editable-field" contenteditable="true" oninput="updateFromPreview()">Nom du client</div>
-                            <div id="prev-clientAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()">Adresse du Client</div>
+                            <div id="prev-clientName" class="text-xl font-bold text-gray-900 editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Nom du client"></div>
+                            <div id="prev-clientAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Adresse du client"></div>
                         </div>
                     </div>
 
@@ -261,16 +297,19 @@
         </div>
     </div>
 
-    <!-- Modale de chargement pour WhatsApp -->
+    <!-- Modale de chargement -->
     <div id="loader-whatsapp" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
         <div class="bg-white p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-            <p class="text-sm font-bold text-gray-700 italic">Préparation du devis pour WhatsApp...</p>
+            <p class="text-sm font-bold text-gray-700 italic">Génération du PDF pour WhatsApp...</p>
         </div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast"></div>
+
     <script>
-        // PWA Metadata (kept for metadata, but registration removed to fix console error)
+        // Metadata Manifest
         const manifest = {
             "name": "Newman Design Devis",
             "short_name": "DevisPro",
@@ -278,24 +317,27 @@
             "display": "standalone",
             "background_color": "#ffffff",
             "theme_color": "#2563eb",
-            "icons": [
-                {
-                    "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><path d=%22M30 70V30L50 55L70 30V70%22 stroke=%22white%22 stroke-width=%228%22 fill=%22none%22/></svg>",
-                    "sizes": "512x512",
-                    "type": "image/svg+xml",
-                    "purpose": "any maskable"
-                }
-            ]
+            "icons": [{
+                "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><path d=%22M30 70V30L50 55L70 30V70%22 stroke=%22white%22 stroke-width=%228%22 fill=%22none%22/></svg>",
+                "sizes": "512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }]
         };
-
         const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(manifestBlob);
         const manifestLink = document.createElement('link');
         manifestLink.rel = 'manifest';
-        manifestLink.href = manifestURL;
+        manifestLink.href = URL.createObjectURL(manifestBlob);
         document.head.appendChild(manifestLink);
 
-        // --- Business Logic ---
+        // --- Fonctions utilitaires ---
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(() => { x.className = x.className.replace("show", ""); }, 5000);
+        }
+
         function numberToFrenchWords(n) {
             if (n === 0) return "zéro";
             const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
@@ -333,10 +375,10 @@
                 name: "NEWMAN DESIGN", 
                 address: "Dakar, Sénégal\nTél: +331 864 53 45 / +221 77 642 51 63" 
             },
-            client: { name: "Nom du client", address: "Adresse du Client" },
+            client: { name: "", address: "" },
             devisNum: `DEV-${new Date().getFullYear()}-${Math.floor(Math.random() * 8999) + 1000}`,
             date: new Date().toLocaleDateString('fr-FR'),
-            items: [{ id: Date.now(), label: "Prestation Design Graphique Premium", qty: 1, price: 250000, tva: 18 }]
+            items: [] 
         };
 
         window.onload = () => {
@@ -353,10 +395,12 @@
             document.getElementById('compAddress').value = state.company.address;
             document.getElementById('clientName').value = state.client.name;
             document.getElementById('clientAddress').value = state.client.address;
+            
             document.getElementById('prev-compName').innerText = state.company.name;
             document.getElementById('prev-compAddress').innerText = state.company.address;
             document.getElementById('prev-clientName').innerText = state.client.name;
             document.getElementById('prev-clientAddress').innerText = state.client.address;
+            
             document.getElementById('prev-devisNum').innerText = state.devisNum;
             document.getElementById('prev-date').innerText = state.date;
         }
@@ -374,6 +418,7 @@
             state.company.address = document.getElementById('prev-compAddress').innerText;
             state.client.name = document.getElementById('prev-clientName').innerText;
             state.client.address = document.getElementById('prev-clientAddress').innerText;
+            
             document.getElementById('compName').value = state.company.name;
             document.getElementById('compAddress').value = state.company.address;
             document.getElementById('clientName').value = state.client.name;
@@ -382,7 +427,7 @@
         }
 
         function addRow() {
-            state.items.push({ id: Date.now(), label: "Nouvel article", qty: 1, price: 0, tva: 18 });
+            state.items.push({ id: Date.now(), label: "", qty: 1, price: 0, tva: 18 });
             renderItems(); calculateTotals(); save();
         }
 
@@ -405,11 +450,17 @@
         function renderItems() {
             const container = document.getElementById('items-list');
             container.innerHTML = '';
+            
+            if (state.items.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-gray-300 italic text-sm">Aucun article. Cliquez sur "Ajouter une ligne" pour commencer.</td></tr>`;
+                return;
+            }
+
             state.items.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-blue-50/30 transition-colors no-print-row border-b border-gray-100";
                 tr.innerHTML = `
-                    <td class="py-4 px-3 border-x border-gray-50"><input type="text" value="${item.label}" oninput="updateItem(${item.id}, 'label', this.value)" class="w-full bg-transparent border-none focus:ring-0 font-semibold text-gray-700 text-sm"></td>
+                    <td class="py-4 px-3 border-x border-gray-50"><input type="text" value="${item.label}" placeholder="Désignation de l'article" oninput="updateItem(${item.id}, 'label', this.value)" class="w-full bg-transparent border-none focus:ring-0 font-semibold text-gray-700 text-sm"></td>
                     <td class="py-4 px-3 border-x border-gray-50 text-center"><input type="number" value="${item.qty}" oninput="updateItem(${item.id}, 'qty', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm"></td>
                     <td class="py-4 px-3 border-x border-gray-50 text-right"><input type="number" value="${item.price}" oninput="updateItem(${item.id}, 'price', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-right text-sm"></td>
                     <td class="py-4 px-3 border-x border-gray-50 text-center">
@@ -430,7 +481,7 @@
                 const trPrint = document.createElement('tr');
                 trPrint.className = "hidden print:table-row border-b border-gray-200";
                 trPrint.innerHTML = `
-                    <td class="py-5 px-3 font-semibold text-gray-800 text-sm border-x border-gray-200">${item.label}</td>
+                    <td class="py-5 px-3 font-semibold text-gray-800 text-sm border-x border-gray-200">${item.label || '---'}</td>
                     <td class="py-5 px-3 text-center text-sm border-x border-gray-200">${item.qty}</td>
                     <td class="py-5 px-3 text-right text-sm border-x border-gray-200">${formatCurrency(item.price)}</td>
                     <td class="py-5 px-3 text-center text-sm font-bold text-gray-400 border-x border-gray-200">${item.tva}%</td>
@@ -488,58 +539,55 @@
         }
 
         function resetApp() {
-            if(confirm("Effacer les données ?")) {
-                localStorage.removeItem('newman_pro_pwa_v1');
-                location.reload();
+            if(confirm("Effacer toutes les données du devis ?")) {
+                state.client.name = "";
+                state.client.address = "";
+                state.items = [];
+                syncUI(); renderItems(); calculateTotals(); save();
             }
         }
 
-        // --- WhatsApp PDF Generation & Sharing ---
+        // --- ENVOI WHATSAPP AVEC PDF EN PIÈCE JOINTE ---
         async function shareViaWhatsApp() {
             const loader = document.getElementById('loader-whatsapp');
             loader.classList.remove('hidden');
 
             try {
                 const element = document.getElementById('devis-paper');
-                
-                // Configuration de html2pdf
                 const opt = {
                     margin: 0,
                     filename: `Devis_${state.devisNum}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
 
-                // Génération du PDF en tant que BLOB
                 const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-                
-                // Création d'un fichier à partir du Blob pour l'API Share
-                const file = new File([pdfBlob], `Devis_${state.devisNum}.pdf`, { type: 'application/pdf' });
+                const fileName = `Devis_Newman_Design_${state.devisNum}.pdf`;
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-                // Vérifier si l'API Share est disponible et supporte le partage de fichiers
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                // On utilise navigator.share qui est le seul moyen web d'attacher un fichier à WhatsApp.
+                // Cela ouvre le menu système pour sélectionner WhatsApp, puis le(s) destinataire(s).
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
-                        title: `Devis Newman Design - ${state.devisNum}`,
-                        text: `Bonjour, voici le devis n° ${state.devisNum} de la part de Newman Design.`
+                        title: `Devis n° ${state.devisNum}`,
+                        text: `Bonjour, veuillez trouver ci-joint le devis n° ${state.devisNum} de Newman Design.`
                     });
                 } else {
-                    // Fallback : Si le partage de fichier n'est pas supporté (ex: vieux navigateur desktop)
-                    // On propose au moins le téléchargement puis on pré-remplit un message texte
+                    // Fallback (Desktop ou navigateur non compatible)
+                    const pdfURL = URL.createObjectURL(pdfBlob);
                     const link = document.createElement('a');
-                    link.href = URL.createObjectURL(pdfBlob);
-                    link.download = `Devis_${state.devisNum}.pdf`;
+                    link.href = pdfURL;
+                    link.download = fileName;
                     link.click();
-
-                    const text = encodeURIComponent(`Bonjour, je viens de vous envoyer le devis n° ${state.devisNum} par email/téléchargement. Merci !`);
-                    window.open(`https://wa.me/?text=${text}`, '_blank');
                     
-                    alert("Le partage direct de fichier n'est pas supporté par votre navigateur. Le PDF a été téléchargé, vous pouvez maintenant l'envoyer manuellement sur WhatsApp.");
+                    const text = encodeURIComponent(`Bonjour, voici le devis n° ${state.devisNum} de Newman Design.`);
+                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                    showToast("Le partage direct n'est pas supporté. Le PDF a été téléchargé, veuillez l'attacher manuellement dans WhatsApp.");
                 }
             } catch (error) {
-                console.error('Erreur lors du partage WhatsApp:', error);
-                alert("Une erreur est survenue lors de la préparation du PDF.");
+                console.error('Erreur WhatsApp:', error);
             } finally {
                 loader.classList.add('hidden');
             }
