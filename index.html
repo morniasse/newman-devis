@@ -22,6 +22,8 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f1f5f9;
+            margin: 0;
+            padding: 0;
         }
 
         /* CONFIGURATION IMPRESSION A4 / GENERATION PDF */
@@ -34,8 +36,6 @@
             html, body {
                 height: 100%;
                 background-color: white !important;
-                margin: 0 !important;
-                padding: 0 !important;
                 overflow: hidden;
             }
 
@@ -45,15 +45,16 @@
 
             .print-container {
                 width: 210mm !important;
-                height: 297mm !important;
+                height: 296.8mm !important; /* Légèrement moins que 297 pour éviter la 2e page */
                 margin: 0 !important;
-                padding: 15mm 25mm 15mm 25mm !important; 
+                padding: 15mm 20mm !important; 
                 box-shadow: none !important;
                 border: none !important;
                 display: flex !important;
                 flex-direction: column !important;
                 position: relative;
                 overflow: hidden !important;
+                page-break-after: avoid;
             }
 
             #devis-paper {
@@ -61,16 +62,6 @@
                 height: 100% !important;
                 padding: 0 !important;
                 border: none !important;
-            }
-
-            .bg-blue-600 { background-color: #2563eb !important; -webkit-print-color-adjust: exact; color: white !important; }
-            .bg-gray-50 { background-color: #f9fafb !important; -webkit-print-color-adjust: exact; }
-            .text-blue-600 { color: #2563eb !important; -webkit-print-color-adjust: exact; }
-            
-            .print-table-border th, .print-table-border td {
-                border-bottom: 1px solid #d1d5db !important;
-                border-left: 1px solid #e5e7eb !important;
-                border-right: 1px solid #e5e7eb !important;
             }
         }
 
@@ -204,6 +195,7 @@
 
             <!-- DOCUMENT DEVIS -->
             <main class="lg:col-span-3">
+                <!-- Ajout de la classe print-container -->
                 <div id="devis-paper" class="bg-white p-12 md:p-16 rounded-2xl shadow-2xl border border-gray-100 print-container min-h-[297mm] flex flex-col">
                     
                     <div class="flex justify-between items-start mb-14">
@@ -274,7 +266,7 @@
                                     <span id="totalHT" class="text-gray-700">0 FCFA</span>
                                 </div>
                                 <div id="tva-details" class="space-y-1"></div>
-                                <div class="flex justify-between items-center py-4 px-6 bg-blue-600 text-white rounded-2xl shadow-xl">
+                                <div class="flex justify-between items-center py-4 px-6 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-100">
                                     <span class="text-xs font-black uppercase tracking-widest">Total Net TTC</span>
                                     <span id="totalTTC" class="text-xl font-black tracking-tight">0 FCFA</span>
                                 </div>
@@ -554,20 +546,29 @@
 
             try {
                 const element = document.getElementById('devis-paper');
+                
+                // Configuration optimisée pour éviter la 2e page vide
                 const opt = {
                     margin: 0,
                     filename: `Devis_${state.devisNum}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    html2canvas: { 
+                        scale: 3, 
+                        useCORS: true, 
+                        logging: false, 
+                        letterRendering: true,
+                        scrollY: 0,
+                        scrollX: 0
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Évite les coupures de pages
                 };
 
+                // Génération du PDF
                 const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
                 const fileName = `Devis_Newman_Design_${state.devisNum}.pdf`;
                 const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-                // On utilise navigator.share qui est le seul moyen web d'attacher un fichier à WhatsApp.
-                // Cela ouvre le menu système pour sélectionner WhatsApp, puis le(s) destinataire(s).
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
@@ -575,7 +576,6 @@
                         text: `Bonjour, veuillez trouver ci-joint le devis n° ${state.devisNum} de Newman Design.`
                     });
                 } else {
-                    // Fallback (Desktop ou navigateur non compatible)
                     const pdfURL = URL.createObjectURL(pdfBlob);
                     const link = document.createElement('a');
                     link.href = pdfURL;
@@ -584,7 +584,7 @@
                     
                     const text = encodeURIComponent(`Bonjour, voici le devis n° ${state.devisNum} de Newman Design.`);
                     window.open(`https://wa.me/?text=${text}`, '_blank');
-                    showToast("Le partage direct n'est pas supporté. Le PDF a été téléchargé, veuillez l'attacher manuellement dans WhatsApp.");
+                    showToast("Partage direct non supporté. Le PDF a été téléchargé, veuillez l'attacher manuellement.");
                 }
             } catch (error) {
                 console.error('Erreur WhatsApp:', error);
