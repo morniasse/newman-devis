@@ -3,17 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Newman Design - Gestion de Devis Local</title>
+    <title>Newman Design - Gestion de Devis Professionnel</title>
     
-    <!-- PWA Metadata -->
-    <meta name="theme-color" content="#2563eb">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><path d=%22M30 70V30L50 55L70 30V70%22 stroke=%22white%22 stroke-width=%228%22 fill=%22none%22/></svg>">
-    
+    <!-- Bibliothèques -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Bibliothèque pour la génération PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
@@ -26,51 +20,48 @@
             padding: 0;
         }
 
-        /* CONFIGURATION IMPRESSION A4 / GENERATION PDF */
+        /* CONFIGURATION IMPRESSION ET PDF A4 */
         @media print {
             @page {
                 size: A4;
                 margin: 0;
             }
-            
             html, body {
                 height: 100%;
                 background-color: white !important;
                 overflow: hidden;
             }
-
             .no-print {
                 display: none !important;
             }
-
             .print-container {
                 width: 210mm !important;
-                height: 296.8mm !important; /* Légèrement moins que 297 pour éviter la 2e page */
+                height: 296.7mm !important;
                 margin: 0 !important;
                 padding: 15mm 20mm !important; 
-                box-shadow: none !important;
-                border: none !important;
                 display: flex !important;
                 flex-direction: column !important;
                 position: relative;
                 overflow: hidden !important;
                 page-break-after: avoid;
-            }
-
-            #devis-paper {
-                min-height: 0 !important;
-                height: 100% !important;
-                padding: 0 !important;
                 border: none !important;
+                box-shadow: none !important;
+            }
+            .table-grid th, .table-grid td {
+                border: 1px solid #e5e7eb !important;
+                -webkit-print-color-adjust: exact;
+            }
+            .bg-gray-50 {
+                background-color: #f9fafb !important;
+                -webkit-print-color-adjust: exact;
             }
         }
 
-        /* Styles pour les zones de saisie */
+        /* Champs éditables */
         .editable-field {
             transition: all 0.2s ease;
             border-radius: 4px;
             padding: 2px 4px;
-            margin: -2px -4px;
             outline: none;
             min-height: 1.2em;
         }
@@ -82,8 +73,6 @@
             background-color: white;
             box-shadow: 0 0 0 2px #3b82f6;
         }
-
-        /* Placeholders pour ContentEditable */
         [contenteditable=true]:empty:before {
             content: attr(data-placeholder);
             color: #9ca3af;
@@ -91,26 +80,31 @@
             font-weight: 400;
         }
 
-        .table-grid th, .table-grid td {
-            border-left: 1px solid #f1f5f9;
-            border-right: 1px solid #f1f5f9;
-            border-bottom: 1px solid #f1f5f9;
+        /* Style tableau */
+        .table-grid {
+            border-collapse: collapse;
+            width: 100%;
         }
-
+        .table-grid th, .table-grid td {
+            border: 1px solid #e5e7eb;
+            padding: 12px 10px;
+        }
+        .table-grid tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
         .btn-whatsapp {
             background-color: #25D366;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: all 0.2s;
         }
         .btn-whatsapp:hover {
             background-color: #128C7E;
             transform: translateY(-1px);
         }
 
-        /* Toast notifications */
         #toast {
             visibility: hidden;
             min-width: 250px;
-            margin-left: -125px;
             background-color: #333;
             color: #fff;
             text-align: center;
@@ -119,14 +113,11 @@
             position: fixed;
             z-index: 100;
             left: 50%;
+            transform: translateX(-50%);
             bottom: 30px;
-            font-size: 14px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        #toast.show {
-            visibility: visible;
-            animation: fadein 0.5s, fadeout 0.5s 4.5s;
-        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 4.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
@@ -134,7 +125,7 @@
 <body class="p-4 md:p-8">
 
     <div class="max-w-6xl mx-auto">
-        <!-- HEADER INTERFACE -->
+        <!-- BARRE D'ACTIONS -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 no-print">
             <div class="flex items-center gap-3">
                 <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-200">
@@ -144,39 +135,39 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Newman Design</h1>
-                    <p class="text-xs text-gray-500 font-medium">Console de Facturation</p>
+                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Console de Facturation</p>
                 </div>
             </div>
             
             <div class="flex flex-wrap justify-center gap-3">
-                <button onclick="resetApp()" class="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm">
-                    Effacer tout
+                <button onclick="resetApp()" class="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm">
+                    Réinitialiser
                 </button>
-                <button onclick="window.print()" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg transition-all flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
+                <button onclick="window.print()" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                     Imprimer
                 </button>
-                <!-- Bouton Partager via WhatsApp -->
-                <button onclick="shareViaWhatsApp()" class="btn-whatsapp px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 448 512">
-                        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.4-8.6-44.6-27.5-16.4-14.7-27.5-32.8-30.7-38.3-3.2-5.6-.3-8.6 2.5-11.4 2.5-2.5 5.5-6.5 8.3-9.7 2.8-3.3 3.7-5.5 5.5-9.2 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.6 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.5 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
-                    </svg>
+                <button onclick="shareViaWhatsApp()" class="btn-whatsapp px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 448 512"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0-101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.4-8.6-44.6-27.5-16.4-14.7-27.5-32.8-30.7-38.3-3.2-5.6-.3-8.6 2.5-11.4 2.5-2.5 5.5-6.5 8.3-9.7 2.8-3.3 3.7-5.5 5.5-9.2 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.6 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.5 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>
                     WhatsApp (PDF)
                 </button>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <!-- PANEL DE CONTROLE -->
+            <!-- PANEL LATÉRAL -->
             <aside class="lg:col-span-1 space-y-5 no-print">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Client</h2>
                     <div class="space-y-3">
-                        <input type="text" id="clientName" placeholder="Nom du client" class="w-full px-4 py-2.5 bg-gray-50 border-none focus:ring-2 focus:ring-blue-500 rounded-lg text-sm font-medium" oninput="updateFromSidebar()">
+                        <input type="text" id="clientName" placeholder="Nom du destinataire" class="w-full px-4 py-2.5 bg-gray-50 border-none focus:ring-2 focus:ring-blue-500 rounded-lg text-sm font-medium" oninput="updateFromSidebar()">
                         <textarea id="clientAddress" placeholder="Adresse du Client" class="w-full px-4 py-2.5 bg-gray-50 border-none focus:ring-2 focus:ring-blue-500 rounded-lg text-sm" rows="3" oninput="updateFromSidebar()"></textarea>
                     </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Réduction (FCFA)</h2>
+                    <input type="number" id="discountInput" placeholder="Montant à déduire" class="w-full px-4 py-2.5 bg-blue-50 border-none focus:ring-2 focus:ring-blue-500 rounded-lg text-sm font-bold text-blue-600" oninput="updateFromSidebar()">
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -186,32 +177,26 @@
                         <textarea id="compAddress" class="w-full px-4 py-2.5 bg-gray-50 border-none focus:ring-2 focus:ring-blue-500 rounded-lg text-sm" rows="5" oninput="updateFromSidebar()"></textarea>
                     </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Données Excel</h2>
-                    <input type="file" id="excelInput" accept=".xlsx, .xls" class="file-upload-input w-full text-[10px] text-gray-400" onchange="handleExcel(event)">
-                </div>
             </aside>
 
-            <!-- DOCUMENT DEVIS -->
+            <!-- APERÇU DEVIS -->
             <main class="lg:col-span-3">
-                <!-- Ajout de la classe print-container -->
                 <div id="devis-paper" class="bg-white p-12 md:p-16 rounded-2xl shadow-2xl border border-gray-100 print-container min-h-[297mm] flex flex-col">
                     
                     <div class="flex justify-between items-start mb-14">
                         <div class="border-l-4 border-blue-600 pl-6">
-                            <div id="prev-compName" class="text-2xl font-black text-blue-600 tracking-tighter uppercase editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Nom de l'entreprise"></div>
-                            <div id="prev-compAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Adresse de l'émetteur"></div>
+                            <div id="prev-compName" class="text-2xl font-black text-blue-600 uppercase tracking-tighter editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="VOTRE ENTREPRISE"></div>
+                            <div id="prev-compAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Coordonnées"></div>
                         </div>
                         <div class="text-right">
-                            <h2 class="text-5xl font-black text-gray-100 uppercase tracking-tighter mb-4 leading-none">DEVIS</h2>
+                            <h2 class="text-5xl font-black text-gray-100 uppercase tracking-tighter mb-4">DEVIS</h2>
                             <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 inline-block text-left min-w-[200px]">
                                 <div class="flex justify-between gap-4 text-xs">
-                                    <span class="text-gray-400 font-bold uppercase">Référence</span>
+                                    <span class="text-gray-400 font-bold uppercase tracking-widest">Référence</span>
                                     <span id="prev-devisNum" class="font-extrabold text-gray-800 tracking-wider"></span>
                                 </div>
                                 <div class="flex justify-between gap-4 text-xs mt-2">
-                                    <span class="text-gray-400 font-bold uppercase">Date</span>
+                                    <span class="text-gray-400 font-bold uppercase tracking-widest">Date</span>
                                     <span id="prev-date" class="font-extrabold text-gray-800"></span>
                                 </div>
                             </div>
@@ -224,35 +209,33 @@
                                 <span class="h-px w-6 bg-blue-600"></span> DESTINATAIRE
                             </div>
                             <div id="prev-clientName" class="text-xl font-bold text-gray-900 editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Nom du client"></div>
-                            <div id="prev-clientAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Adresse du client"></div>
+                            <div id="prev-clientAddress" class="text-gray-500 text-sm leading-relaxed mt-2 whitespace-pre-line editable-field" contenteditable="true" oninput="updateFromPreview()" data-placeholder="Adresse complète"></div>
                         </div>
                     </div>
 
-                    <div class="flex-grow overflow-x-auto">
-                        <table class="w-full text-left table-grid print-table-border border-collapse min-w-[600px]">
+                    <div class="flex-grow">
+                        <table class="table-grid min-w-full">
                             <thead>
-                                <tr class="bg-gray-50 border-y border-gray-100">
-                                    <th class="py-4 px-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Désignation</th>
-                                    <th class="py-4 px-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">Qté</th>
-                                    <th class="py-4 px-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest w-44">P.U. (FCFA)</th>
-                                    <th class="py-4 px-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-16">TVA</th>
-                                    <th class="py-4 px-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest w-44">Total HT</th>
-                                    <th class="py-4 px-3 text-right w-10 no-print"></th>
+                                <tr class="bg-gray-50">
+                                    <th class="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Désignation</th>
+                                    <th class="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">Qté</th>
+                                    <th class="text-right text-[10px] font-black text-gray-400 uppercase tracking-widest w-40">P.U. (FCFA)</th>
+                                    <th class="text-right text-[10px] font-black text-gray-400 uppercase tracking-widest w-40">Total (FCFA)</th>
+                                    <th class="text-right w-10 no-print"></th>
                                 </tr>
                             </thead>
                             <tbody id="items-list"></tbody>
                         </table>
                         
-                        <button onclick="addRow()" class="mt-6 px-4 py-2 border-2 border-dashed border-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-blue-200 hover:text-blue-500 transition-all no-print flex items-center gap-2 mx-auto">
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
-                            Ajouter une ligne
+                        <button onclick="addRow()" class="mt-6 px-4 py-2 border-2 border-dashed border-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-blue-200 hover:text-blue-500 transition-all no-print mx-auto block">
+                            + Ajouter un article
                         </button>
                     </div>
 
                     <div class="mt-10">
                         <div class="mb-6">
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Arrêté à la somme de :</p>
-                            <p id="amount-in-words" class="text-xs font-semibold text-gray-700 italic mt-1 leading-relaxed border-b border-gray-50 pb-2"></p>
+                            <p id="amount-in-words" class="text-xs font-semibold text-gray-700 italic mt-1 border-b border-gray-50 pb-2"></p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-12 items-end">
@@ -261,73 +244,46 @@
                                 <div class="h-20 w-full border-b border-gray-100"></div>
                             </div>
                             <div class="space-y-3">
-                                <div class="flex justify-between text-xs px-4 text-gray-400 font-bold uppercase tracking-tighter">
-                                    <span>Sous-total HT</span>
-                                    <span id="totalHT" class="text-gray-700">0 FCFA</span>
+                                <div class="flex justify-between text-xs px-4 font-bold uppercase text-gray-400 tracking-tighter">
+                                    <span>Montant Brut</span>
+                                    <span id="totalBrut" class="text-gray-700">0</span>
                                 </div>
-                                <div id="tva-details" class="space-y-1"></div>
+                                <div id="discount-row" class="flex justify-between text-xs px-4 font-bold uppercase text-red-500 tracking-tighter hidden">
+                                    <span>Réduction</span>
+                                    <span id="discountVal">0</span>
+                                </div>
                                 <div class="flex justify-between items-center py-4 px-6 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-100">
-                                    <span class="text-xs font-black uppercase tracking-widest">Total Net TTC</span>
-                                    <span id="totalTTC" class="text-xl font-black tracking-tight">0 FCFA</span>
+                                    <span id="totalLabel" class="text-xs font-black uppercase tracking-widest">Total Net</span>
+                                    <span id="totalNet" class="text-xl font-black tracking-tight">0 FCFA</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-auto pt-10 border-t border-gray-50 flex justify-between items-end text-[9px] text-gray-400">
-                        <div class="text-left">
-                            <p class="font-bold text-gray-500">Conditions Générales</p>
-                            <p>Validité : 30 jours. Paiement par chèque ou virement.</p>
-                        </div>
-                        <div class="text-right font-medium">
-                            <p>Newman Design — Dakar, Sénégal</p>
-                            <p class="text-blue-600 font-bold tracking-widest uppercase">www.newmandesign.sn</p>
-                        </div>
+                    <div class="mt-auto pt-10 border-t border-gray-50 flex justify-between items-end text-[9px] text-gray-400 uppercase font-bold tracking-widest">
+                        <div>Newman Design — Dakar, Sénégal</div>
+                        <div class="text-blue-600">WWW.NEWMANDESIGN.SN</div>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- Modale de chargement -->
+    <!-- Loader -->
     <div id="loader-whatsapp" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
         <div class="bg-white p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-            <p class="text-sm font-bold text-gray-700 italic">Génération du PDF pour WhatsApp...</p>
+            <p class="text-sm font-bold text-gray-700">Préparation du devis PDF...</p>
         </div>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast"></div>
 
     <script>
-        // Metadata Manifest
-        const manifest = {
-            "name": "Newman Design Devis",
-            "short_name": "DevisPro",
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#2563eb",
-            "icons": [{
-                "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><path d=%22M30 70V30L50 55L70 30V70%22 stroke=%22white%22 stroke-width=%228%22 fill=%22none%22/></svg>",
-                "sizes": "512x512",
-                "type": "image/svg+xml",
-                "purpose": "any maskable"
-            }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const manifestLink = document.createElement('link');
-        manifestLink.rel = 'manifest';
-        manifestLink.href = URL.createObjectURL(manifestBlob);
-        document.head.appendChild(manifestLink);
-
-        // --- Fonctions utilitaires ---
-        function showToast(msg) {
-            const x = document.getElementById("toast");
-            x.innerText = msg;
-            x.className = "show";
-            setTimeout(() => { x.className = x.className.replace("show", ""); }, 5000);
+        // --- UTILITAIRES ---
+        function formatFCFA(val) {
+            // Applique le format ### ### ###
+            return new Intl.NumberFormat('fr-FR').format(val).replace(/\u00a0/g, ' ');
         }
 
         function numberToFrenchWords(n) {
@@ -359,40 +315,43 @@
             if (val >= 1000000) { res += getPart(Math.floor(val/1000000)) + " million" + (Math.floor(val/1000000)>1?"s":"") + " "; val %= 1000000; }
             if (val >= 1000) { res += (Math.floor(val/1000) === 1 ? "mille" : getPart(Math.floor(val/1000)) + " mille") + " "; val %= 1000; }
             if (val > 0) res += getPart(val);
-            return res.trim().charAt(0).toUpperCase() + res.trim().slice(1);
+            return res.trim().charAt(0).toUpperCase() + res.trim().slice(1) + " FCFA";
         }
 
+        // --- ÉTAT DE L'APP ---
         let state = {
             company: { 
                 name: "NEWMAN DESIGN", 
                 address: "Dakar, Sénégal\nTél: +331 864 53 45 / +221 77 642 51 63" 
             },
             client: { name: "", address: "" },
+            discount: 0,
             devisNum: `DEV-${new Date().getFullYear()}-${Math.floor(Math.random() * 8999) + 1000}`,
             date: new Date().toLocaleDateString('fr-FR'),
             items: [] 
         };
 
         window.onload = () => {
-            const saved = localStorage.getItem('newman_pro_pwa_v1');
+            const saved = localStorage.getItem('newman_pro_v3');
             if (saved) state = JSON.parse(saved);
-            syncUI(); renderItems(); calculateTotals();
+            syncUI();
+            renderItems();
+            calculateTotals();
         };
 
-        function save() { localStorage.setItem('newman_pro_pwa_v1', JSON.stringify(state)); }
-        function formatCurrency(val) { return new Intl.NumberFormat('fr-FR', { style: 'decimal', minimumFractionDigits: 0 }).format(val) + " FCFA"; }
+        function save() { localStorage.setItem('newman_pro_v3', JSON.stringify(state)); }
 
         function syncUI() {
             document.getElementById('compName').value = state.company.name;
             document.getElementById('compAddress').value = state.company.address;
             document.getElementById('clientName').value = state.client.name;
             document.getElementById('clientAddress').value = state.client.address;
+            document.getElementById('discountInput').value = state.discount || "";
             
             document.getElementById('prev-compName').innerText = state.company.name;
             document.getElementById('prev-compAddress').innerText = state.company.address;
             document.getElementById('prev-clientName').innerText = state.client.name;
             document.getElementById('prev-clientAddress').innerText = state.client.address;
-            
             document.getElementById('prev-devisNum').innerText = state.devisNum;
             document.getElementById('prev-date').innerText = state.date;
         }
@@ -402,7 +361,10 @@
             state.company.address = document.getElementById('compAddress').value;
             state.client.name = document.getElementById('clientName').value;
             state.client.address = document.getElementById('clientAddress').value;
-            syncUI(); save();
+            state.discount = parseFloat(document.getElementById('discountInput').value) || 0;
+            syncUI();
+            calculateTotals();
+            save();
         }
 
         function updateFromPreview() {
@@ -419,24 +381,37 @@
         }
 
         function addRow() {
-            state.items.push({ id: Date.now(), label: "", qty: 1, price: 0, tva: 18 });
-            renderItems(); calculateTotals(); save();
+            state.items.push({ id: Date.now(), label: "", qty: 1, price: 0 });
+            renderItems();
+            calculateTotals();
+            save();
         }
 
         function removeRow(id) {
             state.items = state.items.filter(i => i.id !== id);
-            renderItems(); calculateTotals(); save();
+            renderItems();
+            calculateTotals();
+            save();
         }
 
         function updateItem(id, field, value) {
             const item = state.items.find(i => i.id === id);
             if (item) {
-                if (field === 'label') item[field] = value;
-                else item[field] = parseFloat(value) || 0;
+                if (field === 'label') {
+                    item[field] = value;
+                } else {
+                    // Nettoie les espaces avant de convertir en nombre
+                    const cleanValue = typeof value === 'string' ? value.replace(/\s/g, '') : value;
+                    item[field] = parseFloat(cleanValue) || 0;
+                    
+                    // Mise à jour visuelle du montant de la ligne
+                    const lineTotal = item.qty * item.price;
+                    const cell = document.getElementById(`line-total-${item.id}`);
+                    if (cell) cell.innerText = formatFCFA(lineTotal);
+                }
             }
-            const htElement = document.getElementById(`total-ht-${id}`);
-            if(htElement) htElement.innerText = formatCurrency(item.qty * item.price);
-            calculateTotals(); save();
+            calculateTotals();
+            save();
         }
 
         function renderItems() {
@@ -444,129 +419,73 @@
             container.innerHTML = '';
             
             if (state.items.length === 0) {
-                container.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-gray-300 italic text-sm">Aucun article. Cliquez sur "Ajouter une ligne" pour commencer.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-gray-300 italic text-sm">Veuillez ajouter un article pour commencer.</td></tr>`;
                 return;
             }
 
             state.items.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-blue-50/30 transition-colors no-print-row border-b border-gray-100";
                 tr.innerHTML = `
-                    <td class="py-4 px-3 border-x border-gray-50"><input type="text" value="${item.label}" placeholder="Désignation de l'article" oninput="updateItem(${item.id}, 'label', this.value)" class="w-full bg-transparent border-none focus:ring-0 font-semibold text-gray-700 text-sm"></td>
-                    <td class="py-4 px-3 border-x border-gray-50 text-center"><input type="number" value="${item.qty}" oninput="updateItem(${item.id}, 'qty', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm"></td>
-                    <td class="py-4 px-3 border-x border-gray-50 text-right"><input type="number" value="${item.price}" oninput="updateItem(${item.id}, 'price', this.value)" class="w-full bg-transparent border-none focus:ring-0 text-right text-sm"></td>
-                    <td class="py-4 px-3 border-x border-gray-50 text-center">
-                        <select onchange="updateItem(${item.id}, 'tva', this.value)" class="bg-transparent border-none focus:ring-0 text-[10px] font-bold text-gray-400">
-                            <option value="18" ${item.tva === 18 ? 'selected' : ''}>18%</option>
-                            <option value="0" ${item.tva === 0 ? 'selected' : ''}>0%</option>
-                        </select>
+                    <td class="p-0"><input type="text" value="${item.label}" placeholder="Désignation" oninput="updateItem(${item.id}, 'label', this.value)" class="w-full h-full bg-transparent border-none focus:ring-0 font-semibold text-gray-700 text-sm px-3 py-3"></td>
+                    <td class="p-0 text-center"><input type="number" value="${item.qty}" oninput="updateItem(${item.id}, 'qty', this.value)" class="w-full h-full bg-transparent border-none focus:ring-0 text-center text-sm px-3 py-3"></td>
+                    <td class="p-0 text-right">
+                        <input type="text" 
+                               value="${formatFCFA(item.price)}" 
+                               onfocus="this.value = this.value.replace(/\\s/g, '')"
+                               onblur="this.value = formatFCFA(this.value)"
+                               oninput="updateItem(${item.id}, 'price', this.value)" 
+                               class="w-full h-full bg-transparent border-none focus:ring-0 text-right text-sm px-3 py-3">
                     </td>
-                    <td class="py-4 px-3 border-x border-gray-50 text-right font-bold text-gray-700 text-sm" id="total-ht-${item.id}">${formatCurrency(item.qty * item.price)}</td>
-                    <td class="py-4 px-3 text-right no-print">
-                        <button onclick="removeRow(${item.id})" class="text-gray-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <td id="line-total-${item.id}" class="text-right font-bold text-gray-800 text-sm px-3 py-3">${formatFCFA(item.qty * item.price)}</td>
+                    <td class="text-right no-print px-3">
+                        <button onclick="removeRow(${item.id})" class="text-gray-300 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                     </td>
                 `;
                 container.appendChild(tr);
-
-                const trPrint = document.createElement('tr');
-                trPrint.className = "hidden print:table-row border-b border-gray-200";
-                trPrint.innerHTML = `
-                    <td class="py-5 px-3 font-semibold text-gray-800 text-sm border-x border-gray-200">${item.label || '---'}</td>
-                    <td class="py-5 px-3 text-center text-sm border-x border-gray-200">${item.qty}</td>
-                    <td class="py-5 px-3 text-right text-sm border-x border-gray-200">${formatCurrency(item.price)}</td>
-                    <td class="py-5 px-3 text-center text-sm font-bold text-gray-400 border-x border-gray-200">${item.tva}%</td>
-                    <td class="py-5 px-3 text-right font-bold text-gray-800 text-sm border-x border-gray-200">${formatCurrency(item.qty * item.price)}</td>
-                    <td></td>
-                `;
-                container.appendChild(trPrint);
             });
         }
 
         function calculateTotals() {
-            let totalHT = 0, tvaMap = {};
-            state.items.forEach(item => {
-                const lineHT = item.qty * item.price;
-                totalHT += lineHT;
-                const tvaAmount = lineHT * (item.tva / 100);
-                if (!tvaMap[item.tva]) tvaMap[item.tva] = 0;
-                tvaMap[item.tva] += tvaAmount;
-            });
-            const totalTTC = totalHT + Object.values(tvaMap).reduce((a, b) => a + b, 0);
-            document.getElementById('totalHT').innerText = formatCurrency(totalHT);
-            const tvaContainer = document.getElementById('tva-details');
-            tvaContainer.innerHTML = '';
-            Object.keys(tvaMap).sort((a,b)=>b-a).forEach(rate => {
-                const amount = tvaMap[rate];
-                if (amount > 0) {
-                    tvaContainer.innerHTML += `<div class="flex justify-between text-[10px] px-4 italic text-gray-400 font-medium"><span>TVA ${rate}%</span><span>${formatCurrency(amount)}</span></div>`;
-                }
-            });
-            document.getElementById('totalTTC').innerText = formatCurrency(totalTTC);
-            document.getElementById('amount-in-words').innerText = numberToFrenchWords(totalTTC) + " FCFA";
-        }
-
-        function handleExcel(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                if (jsonData.length > 0) {
-                    state.items = jsonData.map(row => ({
-                        id: Math.random() + Date.now(),
-                        label: row['Désignation'] || row['Description'] || "Article",
-                        qty: parseFloat(row['Quantité'] || row['Qté']) || 1,
-                        price: parseFloat(row['Prix'] || row['PU']) || 0,
-                        tva: parseFloat(row['TVA']) || 18
-                    }));
-                    renderItems(); calculateTotals(); save();
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function resetApp() {
-            if(confirm("Effacer toutes les données du devis ?")) {
-                state.client.name = "";
-                state.client.address = "";
-                state.items = [];
-                syncUI(); renderItems(); calculateTotals(); save();
+            const brut = state.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+            const net = Math.max(0, brut - state.discount);
+            
+            document.getElementById('totalBrut').innerText = formatFCFA(brut);
+            
+            const discountRow = document.getElementById('discount-row');
+            const totalLabel = document.getElementById('totalLabel');
+            
+            if (state.discount > 0) {
+                discountRow.classList.remove('hidden');
+                document.getElementById('discountVal').innerText = formatFCFA(state.discount);
+                totalLabel.innerText = "Total après réduction";
+            } else {
+                discountRow.classList.add('hidden');
+                totalLabel.innerText = "Total Net";
             }
+            
+            document.getElementById('totalNet').innerText = formatFCFA(net) + " FCFA";
+            document.getElementById('amount-in-words').innerText = numberToFrenchWords(net);
         }
 
-        // --- ENVOI WHATSAPP AVEC PDF EN PIÈCE JOINTE ---
         async function shareViaWhatsApp() {
             const loader = document.getElementById('loader-whatsapp');
             loader.classList.remove('hidden');
 
             try {
                 const element = document.getElementById('devis-paper');
-                
-                // Configuration optimisée pour éviter la 2e page vide
                 const opt = {
                     margin: 0,
                     filename: `Devis_${state.devisNum}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { 
-                        scale: 3, 
-                        useCORS: true, 
-                        logging: false, 
-                        letterRendering: true,
-                        scrollY: 0,
-                        scrollX: 0
-                    },
+                    html2canvas: { scale: 3, useCORS: true, logging: false },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Évite les coupures de pages
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                 };
 
-                // Génération du PDF
                 const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-                const fileName = `Devis_Newman_Design_${state.devisNum}.pdf`;
+                const fileName = `Devis_Newman_${state.devisNum}.pdf`;
                 const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -581,15 +500,20 @@
                     link.href = pdfURL;
                     link.download = fileName;
                     link.click();
-                    
-                    const text = encodeURIComponent(`Bonjour, voici le devis n° ${state.devisNum} de Newman Design.`);
-                    window.open(`https://wa.me/?text=${text}`, '_blank');
-                    showToast("Partage direct non supporté. Le PDF a été téléchargé, veuillez l'attacher manuellement.");
                 }
             } catch (error) {
-                console.error('Erreur WhatsApp:', error);
+                console.error(error);
             } finally {
                 loader.classList.add('hidden');
+            }
+        }
+
+        function resetApp() {
+            if(confirm("Effacer les données du devis en cours ?")) {
+                state.client = {name:"", address:""};
+                state.items = [];
+                state.discount = 0;
+                syncUI(); renderItems(); calculateTotals(); save();
             }
         }
     </script>
